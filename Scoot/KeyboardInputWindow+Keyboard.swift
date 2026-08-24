@@ -61,49 +61,59 @@ extension KeyboardInputWindow {
 
         switch (character, isHoldingDownLeftMouseButton, modifiers) {
         // Scoot is brought to the background before issuing any mouse-related
-        // operation (like clicking). If the target window was focused ahead of
-        // invoking Scoot, it will regain focus _before_ clicking, which
-        // significantly improves reliability. For more context, see
+        // operation (like clicking), and waits for the target app to become
+        // active again. A click that arrives while the target app is still
+        // inactive only activates that app: most views discard it, so the user
+        // has to press the key twice. For more context, see
         // <https://github.com/mjrusso/scoot/issues/28>.
         case ("\r", false, []):
-            appDelegate?.bringToBackground()
-            mouse.click(button: .left)
+            let mouse = self.mouse
+            appDelegate?.bringToBackground {
+                mouse.click(button: .left)
+            }
             return
         case ("\r", false, _), ("[", false, _), ("]", false, _):
-            appDelegate?.bringToBackground()
-
-            // Note that if a modifier is being held, it will "pass through" to
-            // the corresponding click.
-            switch character {
-            case "\r":
-                mouse.click(button: .left)
-            case "[":
-                mouse.click(button: .center)
-            case "]":
-                mouse.click(button: .right)
-            default:
-                break
+            let mouse = self.mouse
+            appDelegate?.bringToBackground {
+                // Note that if a modifier is being held, it will "pass through"
+                // to the corresponding click.
+                switch character {
+                case "\r":
+                    mouse.click(button: .left)
+                case "[":
+                    mouse.click(button: .center)
+                case "]":
+                    mouse.click(button: .right)
+                default:
+                    break
+                }
             }
             return
         case ("\r", true, _):
-            appDelegate?.bringToBackground()
-            mouse.notifyDrag(.left)
-            mouse.release(.left)
+            let mouse = self.mouse
             isHoldingDownLeftMouseButton = false
+            appDelegate?.bringToBackground {
+                mouse.notifyDrag(.left)
+                mouse.release(.left)
+            }
             return
         case ("=", false, _):
-            appDelegate?.bringToBackground()
-            usleep(10000)
-            mouse.pressDown(.left)
+            let mouse = self.mouse
             isHoldingDownLeftMouseButton = true
-            // Automatically bring Scoot to the foreground, so the user can
-            // continue their drag operation.
-            usleep(10000)
-            appDelegate?.bringToForeground()
+            appDelegate?.bringToBackground { [weak appDelegate] in
+                mouse.pressDown(.left)
+                // Automatically bring Scoot to the foreground, so the user can
+                // continue their drag operation.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+                    appDelegate?.bringToForeground()
+                }
+            }
             return
         case ("\\", false, _):
-            appDelegate?.bringToBackground()
-            mouse.doubleClick(button: .left)
+            let mouse = self.mouse
+            appDelegate?.bringToBackground {
+                mouse.doubleClick(button: .left)
+            }
             return
         default:
             break
