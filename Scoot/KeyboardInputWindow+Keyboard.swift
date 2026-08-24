@@ -66,11 +66,11 @@ extension KeyboardInputWindow {
         // significantly improves reliability. For more context, see
         // <https://github.com/mjrusso/scoot/issues/28>.
         case ("\r", false, []):
-            appDelegate?.bringToBackground()
+            appDelegate?.bringToBackgroundAndWaitForTargetApp()
             mouse.click(button: .left)
             return
         case ("\r", false, _), ("[", false, _), ("]", false, _):
-            appDelegate?.bringToBackground()
+            appDelegate?.bringToBackgroundAndWaitForTargetApp()
 
             // Note that if a modifier is being held, it will "pass through" to
             // the corresponding click.
@@ -102,7 +102,7 @@ extension KeyboardInputWindow {
             appDelegate?.bringToForeground()
             return
         case ("\\", false, _):
-            appDelegate?.bringToBackground()
+            appDelegate?.bringToBackgroundAndWaitForTargetApp()
             mouse.doubleClick(button: .left)
             return
         default:

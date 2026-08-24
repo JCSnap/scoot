@@ -328,8 +328,70 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: Deactivation
 
+    /// The longest time to wait for the target app to become active before
+    /// clicking anyway.
+    static let activationTimeout: TimeInterval = 0.3
+
     func bringToBackground() {
         NSApp.hide(self)
+    }
+
+    /// Hide Scoot and wait, briefly, for the app that was frontmost when Scoot
+    /// was invoked to become active again.
+    ///
+    /// macOS delivers the click that activates an application to the window
+    /// only. A view receives that click just when it returns true from
+    /// `acceptsFirstMouse(for:)`, which is false by default. If Scoot clicks
+    /// while the target app is still inactive, that app eats the click, and the
+    /// user has to repeat the whole operation.
+    ///
+    /// `NSApp.hide(_:)` returns before the next app is active, so this method
+    /// waits for the hand-off to finish.
+    ///
+    /// The wait is bounded, and the caller clicks as soon as this method
+    /// returns. A click is therefore never skipped, only delayed.
+    ///
+    /// See: <https://github.com/mjrusso/scoot/issues/28>
+    func bringToBackgroundAndWaitForTargetApp() {
+        let wasActive = NSApp.isActive
+        let target = currentApp
+
+        bringToBackground()
+
+        guard let target = target,
+              !target.isTerminated,
+              target.processIdentifier != ProcessInfo.processInfo.processIdentifier else {
+            OSLog.main.log("Click: no target app to wait for (scootWasActive=\(wasActive, privacy: .public))")
+            return
+        }
+
+        target.activate()
+
+        let start = Date()
+        let deadline = start.addingTimeInterval(Self.activationTimeout)
+        var settled = false
+
+        while Date() < deadline {
+            // The run loop must keep turning. AppKit processes the hide and the
+            // activation here, so a blocking sleep would stop the very thing
+            // this method waits for.
+            RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.005))
+
+            if !NSApp.isActive && target.isActive {
+                settled = true
+                break
+            }
+        }
+
+        let waited = Int(Date().timeIntervalSince(start) * 1000)
+
+        OSLog.main.log("""
+            Click: waited \(waited, privacy: .public)ms settled=\(settled, privacy: .public) \
+            scootWasActive=\(wasActive, privacy: .public) scootActive=\(NSApp.isActive, privacy: .public) \
+            targetActive=\(target.isActive, privacy: .public) \
+            frontmostIsTarget=\(NSWorkspace.shared.frontmostApplication?.processIdentifier == target.processIdentifier, privacy: .public) \
+            mouse=\(String(describing: NSEvent.mouseLocation), privacy: .public)
+            """)
     }
 
     // MARK: Actions
