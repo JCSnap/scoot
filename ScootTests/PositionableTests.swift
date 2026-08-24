@@ -74,6 +74,22 @@ class PositionableTests: XCTestCase {
         XCTAssertEqual(reduceCrowding(items), items)
     }
 
+    func testNestedItemKeptWhenItIsMuchSmallerThanItsContainer() {
+        // A web link that contains a small overflow menu button. Both elements
+        // are separate click targets, so Scoot must label both.
+        let link = Item(frame: CGRect(origin: CGPoint(x: 198, y: 744),
+                                      size: CGSize(width: 606, height: 71)))
+
+        let menuButton = Item(frame: CGRect(origin: CGPoint(x: 366, y: 762),
+                                            size: CGSize(width: 29, height: 20)))
+
+        XCTAssertTrue(link.frame.contains(menuButton.frame))
+        XCTAssertEqual(link.frame.percentageOverlapping(menuButton.frame), 1.0)
+
+        XCTAssertEqual(reduceCrowding([link, menuButton]), [link, menuButton])
+        XCTAssertEqual(reduceCrowding([menuButton, link]), [menuButton, link])
+    }
+
     func testLargerItemsRemovedWhenFramesOverlapCompletely() {
         let size = CGSize(width: 10, height: 10)
 
@@ -190,11 +206,14 @@ class PositionableTests: XCTestCase {
 
         XCTAssertEqual(reduceCrowding([a, b, c, d, e, f]), [c, e])
 
-        XCTAssertEqual(reduceCrowding([a, b, c, d, e, f, g, h]), [c, e])
+        // `g` (4x4) contains `e` (2x2). `e` covers only 25% of `g`, so `g`
+        // keeps enough uncovered area to stay a target of its own. Both are
+        // kept.
+        XCTAssertEqual(reduceCrowding([a, b, c, d, e, f, g, h]), [c, e, g])
 
-        XCTAssertEqual(reduceCrowding([a, b, a, b, c, d, c, d, e, f, e, f, g, h, g, h]), [c, e])
+        XCTAssertEqual(reduceCrowding([a, b, a, b, c, d, c, d, e, f, e, f, g, h, g, h]), [c, e, g])
 
-        XCTAssertEqual(reduceCrowding([a, b, b, a, c, d, d, c, e, f, f, e, g, h, h, g]), [c, e])
+        XCTAssertEqual(reduceCrowding([a, b, b, a, c, d, d, c, e, f, f, e, g, h, h, g]), [c, e, g])
     }
 
 }

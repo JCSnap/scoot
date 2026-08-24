@@ -4,6 +4,10 @@ import OSLog
 
 struct Accessibility {
 
+    /// The smallest width or height, in points, that an element must have
+    /// before Scoot offers a label for it.
+    static let minimumElementSize: CGFloat = 3.0
+
     struct Element: Positionable, Equatable {
         let role: Role
 
@@ -163,11 +167,30 @@ struct Accessibility {
                     continue
                 }
 
+                // Ignore degenerate elements. A browser clamps the frame of
+                // content that is scrolled out of view to a sliver at the edge
+                // of the viewport. Such elements are not clickable, but they
+                // still consume labels and crowd out real elements.
+                guard frame.width >= Self.minimumElementSize,
+                      frame.height >= Self.minimumElementSize else {
+                    traverse(node: child)
+                    continue
+                }
+
                 let convertedFrame = frame.convertToCocoa()
 
-                let screen = NSScreen.screens.first(where: {
-                    $0.frame.contains(convertedFrame)
-                })
+                // Assign the element to the screen that holds most of it.
+                //
+                // Do not require the screen to contain the frame in full. An
+                // element that straddles a screen edge, or that is partly
+                // scrolled out of view, belongs to a screen too. A containment
+                // test drops those elements without a trace.
+                let screen = NSScreen.screens
+                    .filter { $0.frame.intersects(convertedFrame) }
+                    .max(by: {
+                        $0.frame.intersection(convertedFrame).area
+                            < $1.frame.intersection(convertedFrame).area
+                    })
 
                 let role: Role? = try? child.role()
 
@@ -188,7 +211,9 @@ struct Accessibility {
                     }
 
                     switch role {
-                    case .cell, .button, .radioButton, .link, .checkBox, .slider, .popUpButton, .menuButton, .incrementor, .handle:
+                    case .cell, .button, .radioButton, .link, .checkBox, .slider,
+                         .popUpButton, .menuButton, .incrementor, .handle,
+                         .textField, .textArea, .comboBox, .disclosureTriangle:
                         addElement()
                     default:
                         break

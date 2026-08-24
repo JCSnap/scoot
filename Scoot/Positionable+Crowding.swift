@@ -8,8 +8,10 @@ extension Array where Element: Positionable, Element: Equatable {
     /// If two elements have duplicate frames, one of the elements is removed.
     ///
     /// If two elements have frames that overlap fully (i.e., one of the frames
-    /// contains the other frame), the element with the smaller frame is
-    /// removed.
+    /// contains the other frame), the two elements are only merged when they
+    /// are close to the same size (see `nestedCollapseRatio`). In that case,
+    /// the element with the larger frame is removed. A small element nested
+    /// inside a much larger one is a separate target, so both are kept.
     ///
     /// If two elements have frames that overlap more than
     /// `intersectionThreshold`%, the element with the smaller frame is
@@ -30,7 +32,14 @@ extension Array where Element: Positionable, Element: Equatable {
     /// - Parameter paddingY: the number of pixels to increase the height of an
     ///   element's frame by, when testing to see if the padded frame intersects
     ///   with another element.
-    func reducingCrowding(intersectionThreshold: CGFloat = 0.1, paddingX: CGFloat = 0, paddingY: CGFloat = 0) -> [Element] {
+    ///
+    /// - Parameter nestedCollapseRatio: when one frame fully contains another,
+    ///   the two elements are merged only if the smaller frame covers at least
+    ///   this fraction of the larger frame. Below this fraction, both elements
+    ///   are kept, because the larger element still has enough uncovered area
+    ///   to be a distinct click target. (Example: a web link that contains a
+    ///   small overflow menu button. Both must remain selectable.)
+    func reducingCrowding(intersectionThreshold: CGFloat = 0.1, paddingX: CGFloat = 0, paddingY: CGFloat = 0, nestedCollapseRatio: CGFloat = 0.75) -> [Element] {
 
         var discard = [Element]()
 
@@ -57,12 +66,30 @@ extension Array where Element: Positionable, Element: Equatable {
                 let paddedFramesIntersect = candidate.frame.insetBy(dx: -paddingX, dy: -paddingY).intersects(accumulated.frame)
 
                 if percentageOverlapping == 1 {
+                    // One frame fully contains the other.
+                    //
+                    // Only merge the two elements when they are close to the
+                    // same size. A wrapper that is barely larger than its child
+                    // (common in native apps, where an AXCell wraps an
+                    // AXButton) is the same target, so we keep the child,
+                    // because it is more specific.
+                    //
+                    // A small element nested inside a much larger one is a
+                    // different story. A web link, for example, can contain a
+                    // small overflow menu button. The link keeps most of its
+                    // area uncovered, so it is still its own click target, and
+                    // both elements must stay selectable.
+                    let smallerArea = Swift.min(candidate.frame.area, accumulated.frame.area)
+                    let largerArea = Swift.max(candidate.frame.area, accumulated.frame.area)
+
+                    guard largerArea > 0, (smallerArea / largerArea) >= nestedCollapseRatio else {
+                        // Keep both elements.
+                        return false
+                    }
+
                     // To reduce crowding, only one element is kept (either the
-                    // candidate, or the accumulated). In this case, where the
-                    // elements fully overlap, we choose to keep the element
-                    // with the smaller area. (This neatly handles the case
-                    // where an element has a child; typically, we will want to
-                    // keep the child, because it is more specific.)
+                    // candidate, or the accumulated). We choose the element
+                    // with the smaller area, because it is more specific.
                     if candidate.frame.area >= accumulated.frame.area {
                         // The frame with the smaller area is already in the
                         // accumulator. Don't include the candidate.
