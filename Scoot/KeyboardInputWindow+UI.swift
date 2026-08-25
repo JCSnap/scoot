@@ -33,6 +33,33 @@ extension KeyboardInputWindow {
         appDelegate?.hideMenuItem.isHidden = true
     }
 
+    /// Hand the cell being refined to the jump view of the screen it is on,
+    /// converted into that window's coordinates, and clear it everywhere else.
+    func propagateRefinementRect() {
+        guard let jumpWindowControllers = appDelegate?.jumpWindowControllers else {
+            return
+        }
+
+        for windowController in jumpWindowControllers {
+            let viewController = windowController.viewController
+
+            if let screenRect = refinementRect,
+               let screen = windowController.assignedScreen,
+               screen.frame.intersects(screenRect) {
+                viewController.refinementRect = CGRect(
+                    x: screenRect.origin.x - screen.visibleFrame.origin.x,
+                    y: screenRect.origin.y - screen.visibleFrame.origin.y,
+                    width: screenRect.width,
+                    height: screenRect.height
+                )
+            } else {
+                viewController.refinementRect = nil
+            }
+
+            viewController.redrawGrid()
+        }
+    }
+
     func redrawJumpViews() {
         appDelegate?.jumpWindowControllers.forEach {
             $0.viewController.redrawGrid()

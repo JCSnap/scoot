@@ -38,12 +38,15 @@ import Cocoa
 extension KeyboardInputWindow {
 
     override func cancelOperation(_ sender: Any?) {
+        let wasRefining = isRefiningGridCell
+
         defer {
             currentNode = nil
+            refinementRect = nil
             isHoldingDownLeftMouseButton = false
         }
 
-        if isWalkingDecisionTree {
+        if isWalkingDecisionTree || wasRefining {
             flashFeedback(duration: 0.4)
         } else {
             appDelegate?.bringToBackground()

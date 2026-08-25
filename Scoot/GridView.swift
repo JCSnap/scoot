@@ -26,6 +26,14 @@ class GridView: NSView {
 
         ctx.cgContext.fill(bounds)
 
+        // A cell has been chosen and is being refined. The whole grid is no
+        // longer useful, so draw the keyboard layout over that one cell
+        // instead. See `RefinementGrid`.
+        if let refinementRect = viewController.refinementRect {
+            drawRefinement(in: refinementRect, ctx: ctx)
+            return
+        }
+
         let cellSize = grid.cellSize
 
         ctx.cgContext.setStrokeColor(
@@ -115,5 +123,99 @@ class GridView: NSView {
 
         }
 
+    }
+
+    /// Draw the keyboard layout over the cell being refined.
+    ///
+    /// The letters are sized to fit the cell, so on a small cell they are tiny.
+    /// That is fine: the layout is the keyboard, so the lines alone tell you
+    /// where each key lands. Raise "Grid cell side length" in Settings for a
+    /// coarser grid and larger, readable refinement keys.
+    private func drawRefinement(in cell: CGRect, ctx: NSGraphicsContext) {
+
+        let primaryColor = UserSettings.shared.primaryColor
+
+        // Clear the dimming over the chosen cell, so it stands out from the
+        // rest of the screen.
+        ctx.cgContext.setBlendMode(.clear)
+        ctx.cgContext.fill(cell)
+        ctx.cgContext.setBlendMode(.normal)
+
+        let cells = RefinementGrid.cells(in: cell)
+
+        guard let first = cells.first else {
+            return
+        }
+
+        // Split the cell.
+        ctx.cgContext.setStrokeColor(
+            primaryColor.withAlphaComponent(
+                viewController.gridLineAlphaComponent
+            ).cgColor
+        )
+        ctx.cgContext.setLineWidth(1)
+
+        for subCell in cells.map({ $0.rect }) {
+            ctx.cgContext.stroke(subCell)
+        }
+
+        // Outline the cell itself.
+        ctx.cgContext.setStrokeColor(
+            primaryColor.withAlphaComponent(
+                viewController.gridLabelAlphaComponent
+            ).cgColor
+        )
+        ctx.cgContext.setLineWidth(2)
+        ctx.cgContext.stroke(cell)
+
+        guard UserSettings.shared.showGridLabels else {
+            return
+        }
+
+        // Size the letters to the sub-cell, and never below a floor, so that a
+        // small cell still shows something.
+        let fontSize = Swift.max(
+            6.0,
+            Swift.min(
+                UserSettings.shared.gridViewFontSize,
+                first.rect.height * 0.7,
+                first.rect.width * 1.2
+            )
+        )
+
+        let font = NSFont.monospacedSystemFont(ofSize: fontSize, weight: .medium)
+
+        let paragraphStyle = NSMutableParagraphStyle()
+        paragraphStyle.alignment = .center
+
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: primaryColor.withAlphaComponent(
+                viewController.gridLabelAlphaComponent
+            ),
+            .paragraphStyle: paragraphStyle,
+        ]
+
+        for (key, subCell) in cells {
+            let text = String(key)
+            let string = NSAttributedString(string: text, attributes: attrs)
+
+            let textHeight = string.boundingRect(
+                with: subCell.size,
+                options: .usesLineFragmentOrigin
+            ).height
+
+            string.draw(
+                with: CGRect(
+                    origin: CGPoint(
+                        x: subCell.origin.x,
+                        y: subCell.midY - (textHeight / 2)
+                    ),
+                    size: CGSize(width: subCell.width, height: textHeight)
+                ),
+                options: .usesLineFragmentOrigin,
+                context: nil
+            )
+        }
     }
 }

@@ -143,6 +143,15 @@ struct Accessibility {
             return elements
         }
 
+        // Counters, so a missing element can be traced to the step that
+        // dropped it. See the summary logged at the end of this function.
+        var visited = 0
+        var skippedNoFrame = 0
+        var skippedOutsideWindow = 0
+        var skippedTooSmall = 0
+        var skippedNoRole = 0
+        var skippedRoleNotHinted = 0
+
         func traverse(node: UIElement) {
             guard let children: [UIElement] = try? node.arrayAttribute(.children) else {
                 return
@@ -157,13 +166,17 @@ struct Accessibility {
                     continue
                 }
 
+                visited += 1
+
                 guard let frame: CGRect = try? child.attribute(.frame) else {
+                    skippedNoFrame += 1
                     continue
                 }
 
                 // Ignore any elements that don't intersect with the window
                 // bounds.
                 guard focusedWindowFrame.intersects(frame) else {
+                    skippedOutsideWindow += 1
                     continue
                 }
 
@@ -173,6 +186,7 @@ struct Accessibility {
                 // still consume labels and crowd out real elements.
                 guard frame.width >= Self.minimumElementSize,
                       frame.height >= Self.minimumElementSize else {
+                    skippedTooSmall += 1
                     traverse(node: child)
                     continue
                 }
@@ -216,8 +230,10 @@ struct Accessibility {
                          .textField, .textArea, .comboBox, .disclosureTriangle:
                         addElement()
                     default:
-                        break
+                        skippedRoleNotHinted += 1
                     }
+                } else {
+                    skippedNoRole += 1
                 }
 
                 traverse(node: child)
@@ -227,7 +243,17 @@ struct Accessibility {
 
         traverse(node: focusedWindow)
 
-        OSLog.main.debug("Found \(elements.count) accessibility elements.")
+        // A missing label is nearly always an element that one of the steps
+        // above dropped. These counters say which step, without recording
+        // anything about the content of the window.
+        OSLog.main.log("""
+            Elements: kept=\(elements.count, privacy: .public) of visited=\(visited, privacy: .public) \
+            [noFrame=\(skippedNoFrame, privacy: .public) \
+            outsideWindow=\(skippedOutsideWindow, privacy: .public) \
+            tooSmall=\(skippedTooSmall, privacy: .public) \
+            noRole=\(skippedNoRole, privacy: .public) \
+            roleNotHinted=\(skippedRoleNotHinted, privacy: .public)]
+            """)
 
         return elements
     }

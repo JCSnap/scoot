@@ -41,13 +41,45 @@ extension KeyboardInputWindow {
 
         // FIXME: this logic would be better encoded as a state machine.
 
+        // A grid cell is being refined. The keyboard is a map of the cell, so
+        // one key finishes the move. See `RefinementGrid`.
+        //
+        // This runs before the decision tree, because the tree was reset when
+        // the cell was chosen, and would otherwise read the key as the start
+        // of a new sequence.
+        if let cell = refinementRect, modifiers.isEmpty, characters.count == 1,
+           !isReserved(character, or: event.keyCode), !mode.isCharacterSpecial(character) {
+
+            if let target = RefinementGrid.rect(for: character, in: cell) {
+                mouse.move(to: CGPoint(x: target.midX, y: target.midY))
+                refinementRect = nil
+                flashFeedback(at: target, duration: 1.0)
+            } else {
+                // The key is not on the layout. Leave the cell as it is, and
+                // give the same feedback an unusable key gets elsewhere.
+                refinementRect = nil
+                flashFeedback(duration: 0.8)
+            }
+            return
+        }
+
         if let tree = currentTree, modifiers.isEmpty && characters.count == 1 && !isReserved(character, or: event.keyCode) && !mode.isCharacterSpecial(character) {
 
             if let nextNode = (currentNode ?? tree.root).step(by: character) {
                 if nextNode.isLeaf , let rect = nextNode.value {
                     mouse.move(to: CGPoint(x: rect.midX, y: rect.midY))
-                    flashFeedback(at: rect, duration: 1.4)
                     currentNode = nil
+
+                    // In grid mode the cursor now sits at the centre of the
+                    // cell, which is not always on the target. Offer the
+                    // refinement step. The cursor has already moved, so Enter
+                    // still clicks the centre, and one more key moves the
+                    // cursor inside the cell first.
+                    if activeJumpMode == .grid {
+                        refinementRect = rect
+                    } else {
+                        flashFeedback(at: rect, duration: 1.4)
+                    }
                     return
                 }
                 self.currentNode = nextNode
@@ -66,6 +98,7 @@ extension KeyboardInputWindow {
         // significantly improves reliability. For more context, see
         // <https://github.com/mjrusso/scoot/issues/28>.
         case ("\r", false, []):
+            refinementRect = nil
             appDelegate?.bringToBackgroundAndWaitForTargetApp()
             mouse.click(button: .left)
             return

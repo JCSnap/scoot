@@ -147,3 +147,67 @@ class GridTests: XCTestCase {
     }
 
 }
+
+class RefinementGridTests: XCTestCase {
+
+    // A cell 100 wide and 30 tall makes every sub-cell exactly 10 by 10.
+    let cell = CGRect(x: 0, y: 0, width: 100, height: 30)
+
+    func testEveryRowHoldsTheSameNumberOfKeys() {
+        for row in RefinementGrid.rows {
+            XCTAssertEqual(row.count, RefinementGrid.numColumns)
+        }
+    }
+
+    func testEveryKeyAppearsOnce() {
+        let keys = RefinementGrid.rows.flatMap { $0 }
+        XCTAssertEqual(Set(keys).count, keys.count)
+    }
+
+    func testTopLeftKeyMapsToTheTopLeftOfTheCell() {
+        // Cocoa coordinates: y grows upwards, so the top row has the highest y.
+        let rect = RefinementGrid.rect(for: "q", in: cell)
+        XCTAssertEqual(rect, CGRect(x: 0, y: 20, width: 10, height: 10))
+    }
+
+    func testHomeRowMiddleKeysMapToTheMiddleOfTheCell() {
+        XCTAssertEqual(RefinementGrid.rect(for: "g", in: cell),
+                       CGRect(x: 40, y: 10, width: 10, height: 10))
+        XCTAssertEqual(RefinementGrid.rect(for: "h", in: cell),
+                       CGRect(x: 50, y: 10, width: 10, height: 10))
+    }
+
+    func testTopRightKeyMapsToTheTopRightOfTheCell() {
+        XCTAssertEqual(RefinementGrid.rect(for: "p", in: cell),
+                       CGRect(x: 90, y: 20, width: 10, height: 10))
+    }
+
+    func testBottomRightKeyMapsToTheBottomRightOfTheCell() {
+        XCTAssertEqual(RefinementGrid.rect(for: "/", in: cell),
+                       CGRect(x: 90, y: 0, width: 10, height: 10))
+    }
+
+    func testKeyThatIsNotOnTheLayoutHasNoRect() {
+        XCTAssertNil(RefinementGrid.rect(for: "1", in: cell))
+        XCTAssertNil(RefinementGrid.coordinates(of: "1"))
+    }
+
+    func testEveryCellIsInsideTheChosenCell() {
+        let offset = CGRect(x: 512, y: 384, width: 85, height: 61)
+
+        let cells = RefinementGrid.cells(in: offset)
+
+        XCTAssertEqual(cells.count, RefinementGrid.numColumns * RefinementGrid.numRows)
+
+        for (_, rect) in cells {
+            XCTAssertTrue(offset.insetBy(dx: -0.001, dy: -0.001).contains(rect))
+        }
+    }
+
+    func testCellsTileTheChosenCellWithoutOverlap() {
+        let cells = RefinementGrid.cells(in: cell)
+        let totalArea = cells.reduce(0.0) { $0 + ($1.rect.width * $1.rect.height) }
+        XCTAssertEqual(totalArea, cell.width * cell.height, accuracy: 0.001)
+    }
+
+}

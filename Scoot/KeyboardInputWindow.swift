@@ -62,6 +62,21 @@ class KeyboardInputWindow: TransparentWindow {
     // via the decision tree.
     var currentSequence = [Character]()
 
+    /// The grid cell that the user is refining, in Cocoa screen coordinates.
+    ///
+    /// This is set after a grid cell is chosen, and cleared as soon as the user
+    /// presses a key on the refinement layout, or cancels. See
+    /// `RefinementGrid`.
+    var refinementRect: CGRect? {
+        didSet {
+            propagateRefinementRect()
+        }
+    }
+
+    var isRefiningGridCell: Bool {
+        refinementRect != nil
+    }
+
     var isWalkingDecisionTree: Bool {
         currentNode != nil
     }
@@ -166,12 +181,30 @@ class KeyboardInputWindow: TransparentWindow {
 
         OSLog.main.log("Preparing data structures for element-based nav")
 
-        let elements = Accessibility
+        let foundElements = Accessibility
           .getAccessibleElementsForFocusedWindow(of: app)
+
         // Because Scoot places labels vertically, horizontal congestion is
         // less of an issue in practice. For this reason, add padding in the y
         // direction only (`paddingY`).
+        let elements = foundElements
           .reducingCrowding(intersectionThreshold: 0.1, paddingX: 0.0, paddingY: 10.0)
+
+        // Report what crowding removed. Role and frame only: enough to find a
+        // missing target on screen, without recording its text.
+        let kept = Set(elements.map { $0.frame.debugDescription })
+
+        for element in foundElements where !kept.contains(element.frame.debugDescription) {
+            OSLog.main.log("""
+                Crowding removed \(element.role.rawValue, privacy: .public) \
+                \(element.frame.debugDescription, privacy: .public)
+                """)
+        }
+
+        OSLog.main.log("""
+            Crowding: \(elements.count, privacy: .public) of \
+            \(foundElements.count, privacy: .public) elements kept.
+            """)
 
         var data = [(elements: [Accessibility.Element], screenRects: [CGRect])]()
 

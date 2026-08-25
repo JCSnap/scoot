@@ -96,3 +96,84 @@ class Grid {
     }
 
 }
+
+/// Splits one grid cell into a small grid shaped like the keyboard.
+///
+/// A grid cell is often larger than the thing you want to click, so the centre
+/// of the cell is not always on the target. `RefinementGrid` adds a second
+/// step. After you choose a cell, the cell is divided into the same shape as
+/// the three letter rows of a QWERTY keyboard, and the key you press is the
+/// place the cursor goes. "q" is the top left of the cell, "g" and "h" are the
+/// middle, "p" is the top right, and "/" is the bottom right.
+///
+/// No label is needed to use this. The keyboard is the map.
+enum RefinementGrid {
+
+    /// The three letter rows of a QWERTY keyboard, top row first.
+    ///
+    /// Every row must hold `numColumns` keys.
+    static let rows: [[Character]] = [
+        ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+        ["a", "s", "d", "f", "g", "h", "j", "k", "l", ";"],
+        ["z", "x", "c", "v", "b", "n", "m", ",", ".", "/"],
+    ]
+
+    static let numColumns = 10
+
+    static var numRows: Int {
+        rows.count
+    }
+
+    /// The place of `character` on the keyboard, or nil when the character is
+    /// not one of the keys above. Row 0 is the top row.
+    static func coordinates(of character: Character) -> (column: Int, row: Int)? {
+        for (row, keys) in rows.enumerated() {
+            if let column = keys.firstIndex(of: character) {
+                return (column: column, row: row)
+            }
+        }
+        return nil
+    }
+
+    /// The part of `cell` that the key at `column` and `row` selects.
+    ///
+    /// `cell` is in Cocoa coordinates, where y grows upwards, so the top row of
+    /// the keyboard maps to the highest y.
+    static func rect(atColumn column: Int, row: Int, in cell: CGRect) -> CGRect {
+        let width = cell.width / CGFloat(numColumns)
+        let height = cell.height / CGFloat(numRows)
+
+        return CGRect(
+            x: cell.minX + (CGFloat(column) * width),
+            y: cell.maxY - (CGFloat(row + 1) * height),
+            width: width,
+            height: height
+        )
+    }
+
+    /// The part of `cell` that `character` selects, or nil when the character
+    /// is not on the layout.
+    static func rect(for character: Character, in cell: CGRect) -> CGRect? {
+        guard let (column, row) = coordinates(of: character) else {
+            return nil
+        }
+
+        return rect(atColumn: column, row: row, in: cell)
+    }
+
+    /// Every part of `cell`, paired with the key that selects it. Used to draw
+    /// the layout over the chosen cell.
+    static func cells(in cell: CGRect) -> [(key: Character, rect: CGRect)] {
+        var result = [(key: Character, rect: CGRect)]()
+        result.reserveCapacity(numRows * numColumns)
+
+        for (row, keys) in rows.enumerated() {
+            for (column, key) in keys.enumerated() {
+                result.append((key: key, rect: rect(atColumn: column, row: row, in: cell)))
+            }
+        }
+
+        return result
+    }
+
+}

@@ -22,6 +22,10 @@ class JumpViewController: NSViewController {
     /// Used for element-based navigation.
     var elements = [(element: Accessibility.Element, sequence: String)]()
 
+    /// The grid cell that the user is refining, in this window's coordinates,
+    /// or nil when no cell is being refined. See `RefinementGrid`.
+    var refinementRect: CGRect?
+
     var window: NSWindow? {
         view.window
     }
