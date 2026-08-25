@@ -74,6 +74,38 @@ class PositionableTests: XCTestCase {
         XCTAssertEqual(reduceCrowding(items), items)
     }
 
+    func testSmallItemJustBelowALargeOneIsKept() {
+        // Measured on a GitHub pull request list, in Chrome. The link is the
+        // pull request title, wrapped onto two lines. The small item is the
+        // "Draft" link on the metadata line below it. The two frames do not
+        // touch, but they are less than 10 points apart, so the padded frame
+        // grazes the title. They are separate click targets, and both must
+        // survive.
+        let title = Item(frame: CGRect(origin: CGPoint(x: 257, y: 561),
+                                       size: CGSize(width: 417, height: 43)))
+        let draft = Item(frame: CGRect(origin: CGPoint(x: 421, y: 612),
+                                       size: CGSize(width: 41, height: 14)))
+
+        XCTAssertFalse(title.frame.intersects(draft.frame))
+        XCTAssertTrue(draft.frame.insetBy(dx: 0, dy: -10).intersects(title.frame))
+
+        XCTAssertEqual(reduceCrowding([title, draft]), [title, draft])
+        XCTAssertEqual(reduceCrowding([draft, title]), [draft, title])
+    }
+
+    func testNearlyTouchingItemsOfSimilarSizeAreStillMerged() {
+        // The padded rule still does its job. Two items of the same size, one
+        // sitting a few points above the other, overlap heavily once padded,
+        // so one of them is removed.
+        let upper = Item(frame: CGRect(origin: CGPoint(x: 0, y: 0),
+                                       size: CGSize(width: 100, height: 20)))
+        let lower = Item(frame: CGRect(origin: CGPoint(x: 0, y: 25),
+                                       size: CGSize(width: 100, height: 20)))
+
+        XCTAssertFalse(upper.frame.intersects(lower.frame))
+        XCTAssertEqual(reduceCrowding([upper, lower]).count, 1)
+    }
+
     func testNestedItemKeptWhenItIsMuchSmallerThanItsContainer() {
         // A web link that contains a small overflow menu button. Both elements
         // are separate click targets, so Scoot must label both.

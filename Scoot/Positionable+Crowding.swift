@@ -19,7 +19,11 @@ extension Array where Element: Positionable, Element: Equatable {
     ///
     /// If two elements have frames that do not intersect, but do intersect
     /// with padding applied (see `paddingX` and `paddingY` parameters), the
-    /// element with the smaller frame is removed.
+    /// element with the smaller frame is removed. The padded frames must
+    /// overlap by more than `intersectionThreshold`%, for the same reason the
+    /// unpadded case does: two elements that only graze each other are two
+    /// separate targets, not one. A web page stacks many small links a few
+    /// points below a large one, and every one of them must stay selectable.
     ///
     /// - Parameter intersectionThreshold: the percentage (expressed as a float
     ///   ranging between 0 and 1) that two elements' frames need to overlap in
@@ -63,7 +67,11 @@ extension Array where Element: Positionable, Element: Equatable {
 
                 let percentageOverlapping = candidate.frame.percentageOverlapping(accumulated.frame)
 
-                let paddedFramesIntersect = candidate.frame.insetBy(dx: -paddingX, dy: -paddingY).intersects(accumulated.frame)
+                let paddedFrame = candidate.frame.insetBy(dx: -paddingX, dy: -paddingY)
+
+                let paddedFramesIntersect = paddedFrame.intersects(accumulated.frame)
+
+                let paddedPercentageOverlapping = paddedFrame.percentageOverlapping(accumulated.frame)
 
                 if percentageOverlapping == 1 {
                     // One frame fully contains the other.
@@ -102,7 +110,7 @@ extension Array where Element: Positionable, Element: Equatable {
                         discard.append(accumulated)
                         return false
                     }
-                } else if (framesIntersect && percentageOverlapping >= intersectionThreshold) || (!framesIntersect && paddedFramesIntersect) {
+                } else if (framesIntersect && percentageOverlapping >= intersectionThreshold) || (!framesIntersect && paddedFramesIntersect && paddedPercentageOverlapping >= intersectionThreshold) {
                     // To reduce crowding, only one element is kept (either the
                     // candidate, or the accumulated). We choose the element
                     // with the larger area.

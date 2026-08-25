@@ -81,7 +81,17 @@ class ElementView: NSView {
 
             let padding = CGSize(width: 18.0, height: 18.0)
 
-            let y = rect.origin.y - rect.height + (0.4 * textHeight) - padding.height
+            // Centre the label on the element, instead of anchoring it to the
+            // element's bottom edge. The label is drawn from the top of the
+            // rect below, so the rect's origin is pushed down by half of the
+            // element's height.
+            //
+            // A tall element makes the difference obvious. A web link that
+            // wraps onto a second line is one tall element, and a label at its
+            // bottom edge sits under the last line, where it reads as a label
+            // for whatever comes next. A centred label always sits on the
+            // element it names.
+            let y = rect.origin.y - (rect.height / 2) + (textHeight / 2) - padding.height
 
             string.draw(
                 with: CGRect(
