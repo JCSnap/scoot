@@ -23,14 +23,4 @@ class TransparentWindow: NSWindow {
             .transient,
         ]
     }
-    
-    // Overrides tell Macos to handle keyboard events despite window being borderless
-    override var canBecomeKey: Bool {
-        return true
-    }
-
-    override var canBecomeMain: Bool {
-        return true
-    }
-
 }

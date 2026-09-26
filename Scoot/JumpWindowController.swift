@@ -24,7 +24,7 @@ extension JumpWindowController {
         let storyboard = NSStoryboard(name: "Main", bundle: nil)
         let controller = storyboard.instantiateController(withIdentifier: "WindowController") as! JumpWindowController
         controller.assignScreen(screen: screen)
-        controller.showWindow(self)
+        controller.window?.orderFront(self)
 
         return controller
     }
