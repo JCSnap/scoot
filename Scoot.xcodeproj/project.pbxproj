@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AB2609260000000000000001 /* KeyboardInputTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB2609260000000000000002 /* KeyboardInputTests.swift */; };
 		E500850527BAA0C70053CB02 /* Color+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E500850427BAA0C70053CB02 /* Color+Extensions.swift */; };
 		E500850827BC01760053CB02 /* KeyboardShortcuts in Frameworks */ = {isa = PBXBuildFile; productRef = E500850727BC01760053CB02 /* KeyboardShortcuts */; };
 		E500850A27BC09530053CB02 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E500850927BC09530053CB02 /* AboutView.swift */; };
@@ -79,6 +80,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		AB2609260000000000000002 /* KeyboardInputTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardInputTests.swift; sourceTree = "<group>"; };
 		E500850427BAA0C70053CB02 /* Color+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Color+Extensions.swift"; sourceTree = "<group>"; };
 		E500850927BC09530053CB02 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
 		E500850B27BC907D0053CB02 /* Bundle+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Bundle+Extensions.swift"; sourceTree = "<group>"; };
@@ -250,6 +252,7 @@
 		E577623E262F04D300849D7D /* ScootTests */ = {
 			isa = PBXGroup;
 			children = (
+				AB2609260000000000000002 /* KeyboardInputTests.swift */,
 				E59C1629263E52540033E2CC /* GridTests.swift */,
 				E5EB845027837F380086A5D6 /* GeometryTests.swift */,
 				E59C1630264185940033E2CC /* TreeTests.swift */,
@@ -454,6 +457,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AB2609260000000000000001 /* KeyboardInputTests.swift in Sources */,
 				E59C162A263E52540033E2CC /* GridTests.swift in Sources */,
 				E5EB845127837F380086A5D6 /* GeometryTests.swift in Sources */,
 				E59C1631264185940033E2CC /* TreeTests.swift in Sources */,

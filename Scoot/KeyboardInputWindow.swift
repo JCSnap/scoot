@@ -3,6 +3,10 @@ import OSLog
 
 class KeyboardInputWindow: TransparentWindow {
 
+    override var canBecomeKey: Bool { true }
+
+    override var canBecomeMain: Bool { true }
+
     override func awakeFromNib() {
         super.awakeFromNib()
 
